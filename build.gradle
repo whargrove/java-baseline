@@ -1,11 +1,12 @@
 plugins {
     id "build-dashboard"
     id "project-report"
-    id "com.dorongold.task-tree"
     id "java"
-    id "com.github.andygoossens.gradle-modernizer-plugin"
     id "jacoco"
     id "application"
+
+    id "com.dorongold.task-tree" version "$taskTreePluginVersion"
+    id "com.github.andygoossens.gradle-modernizer-plugin" version "$modernizerPluginVersion"
 }
 
 repositories {
@@ -15,8 +16,6 @@ repositories {
 dependencies {
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-    compileOnly "com.github.spotbugs:spotbugs-annotations:$spotbugsVersion"
-    compileOnly "com.google.code.findbugs:findbugs-annotations:$findbugsAnnotationsVersion"
     compileOnly "org.gaul:modernizer-maven-annotations:$modernizerVersion"
 
     testCompileOnly "org.projectlombok:lombok:$lombokVersion"
@@ -79,11 +78,6 @@ jacocoTestCoverageVerification {
 
 check {
     dependsOn += jacocoTestCoverageVerification
-}
-
-wrapper {
-    gradleVersion = gradleWrapperVersion
-    distributionType = "ALL"
 }
 
 jar {
