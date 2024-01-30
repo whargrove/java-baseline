@@ -97,9 +97,3 @@ spotless {
         formatAnnotations()
     }
 }
-
-tasks.register("updateGitHooks", Copy) {
-    from './scripts/hooks'
-    into './.git/hooks'
-}
-check.dependsOn("updateGitHooks")
