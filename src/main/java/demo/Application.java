@@ -2,7 +2,6 @@ package demo;
 
 import static java.lang.System.out;
 
-
 public final class Application {
     /**
      * Main entry point.
@@ -14,5 +13,5 @@ public final class Application {
     }
 
     // This is a "utility" class, ie, no instances, only static methods
-    private Application() { }
+    private Application() {}
 }
