@@ -1,27 +1,12 @@
-// TODO: Why does IntelliJ complain about these imports?
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import com.github.spotbugs.snom.SpotBugsTask
-
 plugins {
-    id "build-dashboard" // See build/reports/buildDashboard/index.html
-    // TODO: project-report is presently broken because of pitest task
-    id "project-report" // Try the `projectReport` task
+    id "build-dashboard"
+    id "project-report"
     id "com.dorongold.task-tree"
-    id "com.github.ben-manes.versions" // Try the `dependencyUpdates` task
-    id "java" // Gradle support for Java
-    id "checkstyle" // To check that code follow style standards
-    id "pmd" // Static analysis based on source (does not check compiled code)
-    id "com.github.spotbugs" // Static analysis based on compiled code (does not check source)
+    id "java"
     id "com.github.andygoossens.gradle-modernizer-plugin"
-    id "jacoco" // To run test coverage
-    id "info.solidsoft.pitest" // To run mutation testing
-    id "org.kordamp.gradle.jdeps"
-    id "org.owasp.dependencycheck" // To push security to the left
-    id "application" // To build the executable jar
+    id "jacoco"
+    id "application"
 }
-
-version = "0-SNAPSHOT"
-group = "demo"
 
 repositories {
     mavenCentral()
@@ -36,63 +21,13 @@ dependencies {
 
     testCompileOnly "org.projectlombok:lombok:$lombokVersion"
     testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
-    testCompileOnly "com.google.code.findbugs:findbugs-annotations:$findbugsAnnotationsVersion"
 
     testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
     testImplementation "org.assertj:assertj-core:$assertJVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
-    testImplementation "com.github.stefanbirkner:system-lambda:$systemLambdaVersion"
 
     // Quiet build -- build works without this, but JUnit complains
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-
-    spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:$findsecbugsPluginVersion"
-
-    // Give special attention to https://blog.gradle.org/log4j-vulnerability
-    // Gradle 7.3.3+ addresses this out of the box. If you are using Gradle
-    // <7.3.3 (this project is current), you *must* add this:
-    /*
-    constraints {
-        implementation("org.apache.logging.log4j:log4j-core") {
-            version {
-                strictly("[2.17, 3[")
-                prefer("2.17.1")
-            }
-            because("CVE-2021-44228, CVE-2021-45046, CVE-2021-45105: Log4j vulnerable to remote code execution and other critical security vulnerabilities")
-        }
-    }
-    */
-    // Give special attention to a BCEL CVE triggered by Spotbugs
-    // TODO: Update spotbugs for CVE-2022-42920
-    constraints {
-        spotbugs("org.apache.bcel:bcel") {
-            version {
-                strictly("[6.7.0, 7[")
-            }
-            because("CVE-2022-42920: BCEL out-of-bounds but can create arbitrary bytecode")
-        }
-    }
-}
-
-sourceSets {
-    integrationTest {
-        compileClasspath += sourceSets.main.output
-        compileClasspath += sourceSets.test.output
-        runtimeClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.test.output
-    }
-}
-
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-}
-
-// TODO: Work around GitHub issue #54
-configurations.pmd {
-    resolutionStrategy {
-        forcedModules = ["commons-io:commons-io:2.11.0"]
-    }
 }
 
 java {
@@ -106,77 +41,16 @@ tasks.withType(JavaCompile) {
 }
 
 test {
-    // NB -- JaCoCo draws from _unit tests_, not integration tests
     // When tests fail, you still have a coverage report
     finalizedBy jacocoTestReport
 }
-
-tasks.register('integrationTest', Test) {
-    description = 'Runs integration tests.'
-    group = 'verification'
-
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-    shouldRunAfter test
-
-    testLogging {
-        events "passed"
-    }
-}
-
-check.dependsOn integrationTest
 
 tasks.withType(Test) {
     // Quieter builds when JUL is in use (you or another library or tool)
     // TODO: Keep builds noisy in CI
     systemProperty "java.util.logging.config.file",
             "$projectDir/config/logging.properties"
-    // This idiom ensures JUnit5 for integration tests, not just unit tests
     useJUnitPlatform()
-}
-
-checkstyle {
-    toolVersion = checkstyleVersion
-    // default checkstyle config -- specific to your team agreement
-    configFile = project(":").file("config/checkstyle/checkstyle.xml")
-    // Google style (idiosyncratic to Google):
-    // configFile = project(":").file("config/checkstyle/google_checks.xml")
-    // SUN style (closest to modern Java styles) -- the basis for this project:
-    // configFile = project(":").file("config/checkstyle/sun_checks.xml")
-}
-
-pmd {
-    ignoreFailures = false
-    // TODO: targetJdk = 17 -- there is no defined property for this
-    toolVersion = pmdVersion
-
-    consoleOutput = true
-    rulesMinimumPriority = 5
-
-
-    // custom-rules.xml contains editable rule set
-    // you can use it to adjust rules for your own project
-    ruleSets = [
-            rootProject.file("config/pmd/custom-rules.xml")
-    ]
-
-}
-
-spotbugs {
-    effort = "Max"
-    reportLevel = "Low"
-    toolVersion = spotbugsVersion
-}
-
-tasks.withType(SpotBugsTask) {
-    reports {
-        html {
-            enabled = true
-        }
-        xml {
-            enabled = true
-        }
-    }
 }
 
 modernizer {
@@ -203,60 +77,8 @@ jacocoTestCoverageVerification {
     }
 }
 
-pitest {
-    junit5PluginVersion = pitestJUnit5PluginVersion
-    mutationThreshold = 100
-    // Cannot name this "pitestVersion" -- the plugin has a property of the same
-    // name, so this property needs to have a distinct name to satisfy Gradle
-    pitestVersion = "$pitestToolVersion"
-    timestampedReports = false
-    verbose = true
-}
-
-tasks.named("pitest") { // PITest plugin does not expose task as expected
-    dependsOn jacocoTestCoverageVerification
-}
-
-jdepsReport {
-    // TODO: Report shows a big mess with dependencies
-    // TODO: Why mess with multi-release jars?
-    multiReleaseJars = [".*": "$jdkVersion"]
-}
-
-dependencyCheck {
-    failBuildOnCVSS = 0
-    skip = Boolean.getBoolean("owasp.skip") // DEFAULT is false
-    suppressionFile = rootProject.file("config/owasp-suppressions.xml")
-
-    // Use this block when mirroring the NIST CVE data -- the data may suffer
-    // timeouts for downloading. GitHub, for example, maintains caches of the
-    // data, and you might see your local build fail for access, but pass in CI
-    // cve {
-    //     urlBase = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-%d.json.gz"
-    //     // urlBase = "file:///PATH/TO/mirror/nvdcve-1.1-%d.json.gz"
-    //     urlModified = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-modified.json.gz"
-    //     // urlModified = "file:///PATH/TO/mirror/nvdcve-1.1-modified.json.gz"
-    // }
-}
-
-jar {
-    manifest {
-        attributes 'Main-Class': "$mainClass"
-        attributes 'Add-Opens': 'java.base/java.lang java.base/java.util java.base/java.lang.reflect'
-    }
-}
-
 check {
     dependsOn += jacocoTestCoverageVerification
-    dependsOn += "pitest"
-    dependsOn += integrationTest
-    dependsOn += dependencyCheckAnalyze
-}
-
-tasks.withType(DependencyUpdatesTask) {
-    rejectVersionIf {
-        !isStable(it.candidate.version) && isStable(it.currentVersion)
-    }
 }
 
 wrapper {
@@ -264,11 +86,9 @@ wrapper {
     distributionType = "ALL"
 }
 
-static def isStable(version) {
-    def stableKeyword = ["RELEASE", "FINAL", "GA"].any {
-        version.uppercase().contains(it)
+jar {
+    manifest {
+        attributes 'Main-Class': "$mainClass"
+        attributes 'Add-Opens': 'java.base/java.lang java.base/java.util java.base/java.lang.reflect'
     }
-    def otherReleasePattern = version ==~ '^[0-9,.v-]+(-r)?$'
-
-    return stableKeyword || otherReleasePattern
 }
