@@ -45,10 +45,6 @@ test {
 }
 
 tasks.withType(Test) {
-    // Quieter builds when JUL is in use (you or another library or tool)
-    // TODO: Keep builds noisy in CI
-    systemProperty "java.util.logging.config.file",
-            "$projectDir/config/logging.properties"
     useJUnitPlatform()
 }
 
@@ -82,7 +78,11 @@ check {
 
 jar {
     manifest {
-        attributes 'Main-Class': "$mainClass"
+        attributes 'Main-Class': "demo.Application"
         attributes 'Add-Opens': 'java.base/java.lang java.base/java.util java.base/java.lang.reflect'
     }
+}
+
+application {
+    mainClassName = "demo.Application"
 }
