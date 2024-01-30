@@ -89,6 +89,7 @@ application {
 }
 
 spotless {
+    ratchetFrom "origin/master"
     java {
         palantirJavaFormat()
         importOrder()
@@ -96,3 +97,9 @@ spotless {
         formatAnnotations()
     }
 }
+
+tasks.register("updateGitHooks", Copy) {
+    from './scripts/hooks'
+    into './.git/hooks'
+}
+check.dependsOn("updateGitHooks")
